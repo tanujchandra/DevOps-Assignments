@@ -1,0 +1,3 @@
+# keep shell scripts LF so they run on Linux/macOS/WSL even if cloned on Windows
+*.sh text eol=lf
+*.sql text eol=lf

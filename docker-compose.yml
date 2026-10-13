@@ -1,0 +1,33 @@
+# Local PostgreSQL for the hotel bookings assessment.
+# On the FIRST start the official image runs every file in
+# /docker-entrypoint-initdb.d in alphabetical order:
+#   001 -> 002 -> 003 (schema + index)  ->  004 (seed data)
+services:
+  db:
+    image: postgres:16
+    container_name: hotel_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-hotel}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations/001_create_hotel_bookings.sql:/docker-entrypoint-initdb.d/001_create_hotel_bookings.sql:ro
+      - ./db/migrations/002_create_booking_events.sql:/docker-entrypoint-initdb.d/002_create_booking_events.sql:ro
+      - ./db/migrations/003_add_indexes.sql:/docker-entrypoint-initdb.d/003_add_indexes.sql:ro
+      - ./db/seed/seed.sql:/docker-entrypoint-initdb.d/004_seed.sql:ro
+    healthcheck:
+      # -h 127.0.0.1 forces a TCP check. During first-time init the temporary
+      # server only listens on a unix socket, so this turns healthy only AFTER
+      # migrations and seed have finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  pgdata:
